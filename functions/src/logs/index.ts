@@ -48,10 +48,6 @@ export function nlpTaskError(taskName: string, err: Error) {
   console.error(`Error occured while performing task '${taskName}'`, err);
 }
 
-export function documentDeleted(path: string) {
-  console.log(`Document ${path} was deleted, no processing is required`);
-}
-
 export function documentUpdatedUnchangedInput() {
   console.log(
     "Document was updated, input string has not changed, no processing is required"
