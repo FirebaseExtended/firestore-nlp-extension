@@ -63,8 +63,8 @@ When you use Firebase Extensions, you're only charged for the underlying resourc
 
 **Cloud Functions:**
 
-* **firestoreNLP:** Listens for writes of new strings to your specified Cloud Firestore collection, performs the configured NLP tasks on the string, then writes the output from the NLP tasks back to the same document.
-
+* **firestoreNlpDocCreate:** Listens for new documents in your specified Cloud Firestore collection, performs the configured NLP tasks on a specific string, then writes the output from the NLP tasks back to the same document.
+* **firestoreNlpDocUpdate:** Same functionality as `firestoreNlpDocCreate`, but listens for update on documents. Checks if input field has changed and, if so, overwrites old NLP data with new NLP data.
 
 
 **APIs Used**:

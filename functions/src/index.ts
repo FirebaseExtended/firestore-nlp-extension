@@ -19,7 +19,6 @@ import * as admin from "firebase-admin";
 
 import * as logs from "./logs";
 import config from "./config";
-import * as utils from "./utilities";
 import * as validators from "./validators";
 
 import {
@@ -38,54 +37,53 @@ const nlpTaskHandler = new NlpTaskHandler({
 
 admin.initializeApp();
 
-export const firestoreNLP = functions.handler.firestore.document.onWrite(
-  async (change): Promise<void> => {
-    // needed to stop circular calls
-    if (config.inputFieldName === config.outputFieldName) {
-      logs.fieldNamesNotDifferent();
+export const firestoreNlpDocCreate = functions.handler.firestore.document.onCreate(
+  async (docSnapshot): Promise<void> => {
+    if(!isConfigValid()) {
       return;
     }
 
-    // needed to avoid possible circular calls
-    if (
-      validators.isInputFieldSubfieldOfOutputField(
-        config.inputFieldName,
-        config.outputFieldName
-      )
-    ) {
-      logs.inputFieldIsSubfieldOfOutputField();
-      return;
-    }
-
-    const changeType = utils.getChangeType(change);
-
-    switch (changeType) {
-      case utils.ChangeType.CREATE:
-        await handleDocumentCreate(change.after);
-        break;
-      case utils.ChangeType.DELETE:
-        handleDeleteDocument(change.before);
-        break;
-      case utils.ChangeType.UPDATE:
-        await handleUpdateDocument(change.before, change.after);
-        break;
-      default:
-        throw new Error(
-          "Change type was something other than 'CREATE', " +
-            "'UPDATE' or 'DELETE'."
-        );
-    }
+    await handleDocumentCreate(docSnapshot);
 
     logs.complete();
   }
 );
 
-function extractInput(snapshot: admin.firestore.DocumentSnapshot): string {
-  return snapshot.get(config.inputFieldName);
+export const firestoreNlpDocUpdate = functions.handler.firestore.document.onUpdate(
+  async (change): Promise<void> => {
+    if(!isConfigValid()) {
+      return;
+    }
+
+    await handleUpdateDocument(change.before, change.after);
+
+    logs.complete();
+  }
+);
+
+function isConfigValid(): boolean {
+  // needed to stop circular calls
+  if (config.inputFieldName === config.outputFieldName) {
+    logs.fieldNamesNotDifferent();
+    return false;
+  }
+
+  // needed to avoid possible circular calls
+  if (
+    validators.isInputFieldSubfieldOfOutputField(
+      config.inputFieldName,
+      config.outputFieldName
+    )
+  ) {
+    logs.inputFieldIsSubfieldOfOutputField();
+    return false;
+  }
+
+  return true;
 }
 
-function handleDeleteDocument(docSnapshot: admin.firestore.DocumentSnapshot) {
-  logs.documentDeleted(docSnapshot.ref.path);
+function extractInput(snapshot: admin.firestore.DocumentSnapshot): string {
+  return snapshot.get(config.inputFieldName);
 }
 
 async function handleUpdateDocument(

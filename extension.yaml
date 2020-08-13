@@ -44,16 +44,28 @@ roles:
     reason: Allows the extension to read input data from Cloud Firestore and write the NLP data to Cloud Firestore.
 
 resources:
-  - name: firestoreNLP
+  - name: firestoreNlpDocCreate
     type: firebaseextensions.v1beta.function
     description:
-      Listens for writes of new strings to your specified Cloud Firestore collection, performs the configured NLP tasks on the string,
+      Listens for new documents in your specified Cloud Firestore collection, performs the configured NLP tasks on a specific string,
       then writes the output from the NLP tasks back to the same document.
       The NLP tasks available are entity extraction, sentiment analysis and content classification.
     properties:
       location: ${LOCATION}
       eventTrigger:
-        eventType: providers/cloud.firestore/eventTypes/document.write
+        eventType: providers/cloud.firestore/eventTypes/document.create
+        resource: projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION_PATH}/{messageId}
+      runtime: "nodejs10"
+  - name: firestoreNlpDocUpdate
+    type: firebaseextensions.v1beta.function
+    description:
+      Listens for updates to strings in your specified Cloud Firestore collection, performs the configured NLP tasks on the string,
+      then writes the output from the NLP tasks back to the same document (overriding any previous data).
+      The NLP tasks available are entity extraction, sentiment analysis and content classification.
+    properties:
+      location: ${LOCATION}
+      eventTrigger:
+        eventType: providers/cloud.firestore/eventTypes/document.update
         resource: projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION_PATH}/{messageId}
       runtime: "nodejs10"
 
