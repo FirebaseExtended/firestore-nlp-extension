@@ -1,4 +1,4 @@
-Use this extension to perform NLP tasks on strings (for example, reviews) written to a Cloud Firestore collection. The tasks available are sentiment analysis, entity extraction and text classification.
+Use this extension to perform natural language processing (NLP) tasks on strings (for example, reviews) written to a Cloud Firestore collection. The tasks available are sentiment analysis, entity extraction and text classification.
 
 This extension listens to your specified Cloud Firestore collection. If you add a string to a specified field in any document within that collection, this extension:
 
@@ -7,8 +7,7 @@ This extension listens to your specified Cloud Firestore collection. If you add 
 
 You specify the desired NLP tasks at configuration time. All tasks are powered by the Google [Cloud Natural Language API](https://cloud.google.com/natural-language/docs/). The options offered are:
 - Sentiment analysis.
-- Entity extraction.
-  - Entity extraction offers additional customization. You can specify the types of entities to save (for example, `LOCATION`, `PERSON`) and specify if the extension should save common noun entities.
+- Entity extraction. Additional customization is available for this task. You can specify the types of entities to save (for example, `LOCATION`, `PERSON`) and specify if the extension should save common noun entities.
 - Text classification.
 
 If the original input field of the document is updated, then the NLP data will be automatically updated, as well.

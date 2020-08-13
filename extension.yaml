@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ description: >-
 
 license: Apache-2.0
 
-sourceUrl: https://github.com/FirebasePrivate/extensions-alpha/tree/launch.ml 
+sourceUrl: https://github.com/FirebaseExtended/firestore-nlp-extension 
 
 author:
   authorName: Firebase
@@ -31,7 +31,6 @@ author:
 
 contributors:
   - authorName: Walid Bounouar
-    email: wbounouar@google.com
     url: https://github.com/WalidBounouar
 
 billingRequired: true
@@ -42,7 +41,7 @@ apis:
 
 roles:
   - role: datastore.user
-    reason: Allows the extension to write the NLP data to Cloud Firestore.
+    reason: Allows the extension to read input data from Cloud Firestore and write the NLP data to Cloud Firestore.
 
 resources:
   - name: firestoreNLP
