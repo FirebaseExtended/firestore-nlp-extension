@@ -18,7 +18,6 @@ import * as functionsTestInit from "firebase-functions-test";
 import mockedEnv from "mocked-env";
 import { createDocumentSnapshot } from "./utils/firestoreUtils";
 import {
-  createMockDocSnapshotImplementation,
   mockFirestoreTransaction,
   mockFirestoreUpdate,
 } from "./mocks/firestoreMocks";
@@ -119,7 +118,6 @@ describe("extension", () => {
       let admin;
       let wrappedFirestoreNlpDocCreate;
       let afterDocSnapshot;
-      let mockedAfterDocSnapshot;
 
       /**
        * Imports extension functions src and admin modules.
@@ -145,10 +143,6 @@ describe("extension", () => {
 
         // setup the snapshot and mock snapshots for a CREATE scenario
         afterDocSnapshot = createDocumentSnapshot();
-        mockedAfterDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: afterDocSnapshot,
-          exists: true,
-        });
       });
 
       test(
@@ -191,7 +185,7 @@ describe("extension", () => {
         "logs the completion of function when a document is created without " +
           "breaking errors during processing",
         async () => {
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/completed/i)
@@ -216,10 +210,10 @@ describe("extension", () => {
           Promise.resolve({ taskName: Task.ENTITY, error: entityError })
         );
 
-        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+        await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          mockedAfterDocSnapshot.ref,
+          afterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           {}
         );
@@ -254,7 +248,7 @@ describe("extension", () => {
 
           resetRequiredModulesForFirestoreNlpDocCreate(); // needed after jest.resetModules()
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           const expectedNewData = {
             SENTIMENT: {
@@ -263,7 +257,7 @@ describe("extension", () => {
             },
           };
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            mockedAfterDocSnapshot.ref,
+            afterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             expectedNewData
           );
@@ -279,7 +273,7 @@ describe("extension", () => {
             Promise.resolve({ taskName: Task.SENTIMENT, error: sentimentError })
           );
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           // double check to allow use of simple regex
           expect(mockConsoleError).toHaveBeenCalledWith(
@@ -305,7 +299,7 @@ describe("extension", () => {
             })
           );
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           // double check to allow use of simple regex
           expect(mockConsoleError).toHaveBeenCalledWith(
@@ -328,7 +322,7 @@ describe("extension", () => {
             Promise.resolve({ taskName: Task.ENTITY, error: entityError })
           );
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           // double check to allow use of simple regex
           expect(mockConsoleError).toHaveBeenCalledWith(
@@ -355,7 +349,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/someTask/)
@@ -376,7 +370,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockFirestoreUpdate).toHaveBeenCalled();
         }
@@ -405,13 +399,13 @@ describe("extension", () => {
         // re-import modules because jest.resetModules
         resetRequiredModulesForFirestoreNlpDocCreate();
 
-        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+        await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
         const expectedNewData = {
           SENTIMENT: { score: 0.75, magnitude: 0.5 },
         };
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          mockedAfterDocSnapshot.ref,
+          afterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           expectedNewData
         );
@@ -437,13 +431,13 @@ describe("extension", () => {
         // re-import modules because jest.resetModules
         resetRequiredModulesForFirestoreNlpDocCreate();
 
-        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+        await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
         const expectedNewData = {
           CLASSIFICATION: ["/Internet & Telecom/Mobile & Wireless"],
         };
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          mockedAfterDocSnapshot.ref,
+          afterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           expectedNewData
         );
@@ -472,7 +466,7 @@ describe("extension", () => {
         // re-import modules because jest.resetModules
         resetRequiredModulesForFirestoreNlpDocCreate();
 
-        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+        await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
         const expectedNewData = {
           ENTITY: {
@@ -480,7 +474,7 @@ describe("extension", () => {
           },
         };
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          mockedAfterDocSnapshot.ref,
+          afterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           expectedNewData
         );
@@ -529,7 +523,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           const expectedNewData = {
             SENTIMENT: {
@@ -542,7 +536,7 @@ describe("extension", () => {
             },
           };
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            mockedAfterDocSnapshot.ref,
+            afterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             expectedNewData
           );
@@ -572,10 +566,10 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            mockedAfterDocSnapshot.ref,
+            afterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             { CLASSIFICATION: [] }
           );
@@ -605,10 +599,10 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            mockedAfterDocSnapshot.ref,
+            afterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             { ENTITY: {} }
           );
@@ -630,7 +624,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          const resolution = await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
           expect(mockPerformTextClassification).not.toHaveBeenCalled();
@@ -657,7 +651,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          const resolution = await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockFirestoreUpdate).not.toHaveBeenCalled();
 
@@ -682,7 +676,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockConsoleError).toHaveBeenCalledWith(
             expect.stringMatching(/input/i)
@@ -711,7 +705,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          const resolution = await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
           expect(mockPerformTextClassification).not.toHaveBeenCalled();
@@ -738,7 +732,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          const resolution = await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockFirestoreUpdate).not.toHaveBeenCalled();
 
@@ -763,7 +757,7 @@ describe("extension", () => {
           // re-import modules because jest.resetModules
           resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+          await wrappedFirestoreNlpDocCreate(afterDocSnapshot);
 
           expect(mockConsoleError).toHaveBeenCalledWith(
             expect.stringMatching(/input/i)
@@ -784,8 +778,6 @@ describe("extension", () => {
       let wrappedFirestoreNlpDocUpdate;
       let beforeDocSnapshot;
       let afterDocSnapshot;
-      let mockedBeforeDocSnapshot;
-      let mockedAfterDocSnapshot;
       let change;
 
       /**
@@ -812,17 +804,9 @@ describe("extension", () => {
         // setup the snapshot and mock snapshots for a UPDATE scenario
         beforeDocSnapshot = createDocumentSnapshot({ input: "Before" });
         afterDocSnapshot = createDocumentSnapshot({ input: "After" });
-        mockedBeforeDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: beforeDocSnapshot,
-          exists: true,
-        });
-        mockedAfterDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: afterDocSnapshot,
-          exists: true,
-        });
         change = functionsTest.makeChange(
-          mockedBeforeDocSnapshot,
-          mockedAfterDocSnapshot
+          beforeDocSnapshot,
+          afterDocSnapshot
         );
       });
 
@@ -831,17 +815,12 @@ describe("extension", () => {
           "field unchanged",
         async () => {
           // adjust default setup for update scenario
-          const newMockBeforeDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
-          const newMockAfterDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
+          const newBeforeDocSnap = createDocumentSnapshot({ input: "Test" });
+          const newAfterDocSnap = createDocumentSnapshot({ input: "Test" });
+
           change = functionsTest.makeChange(
-            newMockBeforeDocSnap,
-            newMockAfterDocSnap
+            newBeforeDocSnap,
+            newAfterDocSnap
           );
 
           const resolution = await wrappedFirestoreNlpDocUpdate(change);
@@ -861,17 +840,11 @@ describe("extension", () => {
           "field unchanged",
         async () => {
           // adjust default setup for update scenario
-          const newMockBeforeDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
-          const newMockAfterDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
+          const newBeforeDocSnap = createDocumentSnapshot({ input: "Test" });
+          const newAfterDocSnap = createDocumentSnapshot({ input: "Test" });
           change = functionsTest.makeChange(
-            newMockBeforeDocSnap,
-            newMockAfterDocSnap
+            newBeforeDocSnap,
+            newAfterDocSnap
           );
 
           const resolution = await wrappedFirestoreNlpDocUpdate(change);
@@ -889,17 +862,11 @@ describe("extension", () => {
           "field unchanged",
         async () => {
           // adjust default setup for update scenario
-          const newMockBeforeDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
-          const newMockAfterDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
+          const newBeforeDocSnap = createDocumentSnapshot({ input: "Test" });
+          const newAfterDocSnap = createDocumentSnapshot({ input: "Test" });
           change = functionsTest.makeChange(
-            newMockBeforeDocSnap,
-            newMockAfterDocSnap
+            newBeforeDocSnap,
+            newAfterDocSnap
           );
 
           await wrappedFirestoreNlpDocUpdate(change);
@@ -972,19 +939,11 @@ describe("extension", () => {
           "input field",
         async () => {
           // adjust default setup for update scenario
-          const newMockBeforeDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
-          const newMockAfterDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({
-              notInput: "Not input field",
-            }),
-            exists: true,
-          });
+          const newBeforeDocSnap = createDocumentSnapshot({ input: "Test" });
+          const newAfterDocSnap = createDocumentSnapshot({ notInput: "Not input field" });
           change = functionsTest.makeChange(
-            newMockBeforeDocSnap,
-            newMockAfterDocSnap
+            newBeforeDocSnap,
+            newAfterDocSnap
           );
 
           await wrappedFirestoreNlpDocUpdate(change);
@@ -1002,19 +961,11 @@ describe("extension", () => {
           "is updated with deletion of input field",
         async () => {
           // adjust default setup for update scenario
-          const newMockBeforeDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ input: "Test" }),
-            exists: true,
-          });
-          const newMockAfterDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({
-              notInput: "Not input field",
-            }),
-            exists: true,
-          });
+          const newBeforeDocSnap = createDocumentSnapshot({ input: "Test" });
+          const newAfterDocSnap = createDocumentSnapshot({ notInput: "Not input field" });
           change = functionsTest.makeChange(
-            newMockBeforeDocSnap,
-            newMockAfterDocSnap
+            newBeforeDocSnap,
+            newAfterDocSnap
           );
 
           await wrappedFirestoreNlpDocUpdate(change);
@@ -1033,19 +984,11 @@ describe("extension", () => {
           "document is updated and input filed is missing before and after update",
         async () => {
           // adjust default setup for update scenario
-          const newMockBeforeDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({ notInput: "Test" }),
-            exists: true,
-          });
-          const newMockAfterDocSnap = createMockDocSnapshotImplementation({
-            documentSnapshot: createDocumentSnapshot({
-              notInput: "Not input field",
-            }),
-            exists: true,
-          });
+          const newBeforeDocSnap = createDocumentSnapshot({ notInput: "Test" });
+          const newAfterDocSnap = createDocumentSnapshot({ notInput: "Not input field" });
           change = functionsTest.makeChange(
-            newMockBeforeDocSnap,
-            newMockAfterDocSnap
+            newBeforeDocSnap,
+            newAfterDocSnap
           );
 
           await wrappedFirestoreNlpDocUpdate(change);
