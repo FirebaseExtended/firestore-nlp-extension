@@ -80,65 +80,75 @@ describe("extension", () => {
     mockConsoleError.mockClear();
   });
 
-  test("function firestoreNLP is exported", () => {
+  test("function firestoreNlpDocCreate is exported", () => {
     mockEnv = mockedEnv(defaultEnvironment);
 
     const exportedFunctions = jest.requireActual("../src");
 
-    expect(exportedFunctions.firestoreNLP).toBeInstanceOf(Function);
+    expect(exportedFunctions.firestoreNlpDocCreate).toBeInstanceOf(Function);
   });
 
-  describe("functions.firestoreNLP", () => {
-    let wrappedFirestoreNLP;
+  test("function firestoreNlpDocUpdate is exported", () => {
+    mockEnv = mockedEnv(defaultEnvironment);
 
-    let admin;
+    const exportedFunctions = jest.requireActual("../src");
 
-    /**
-     * Imports extension functions src and admin modules.
-     * Usually needed after a "jest.resetModules()" since it clear admin import.
-     */
-    function resetRequiredModules() {
-      wrappedFirestoreNLP = functionsTest.wrap(require("../src").firestoreNLP);
-      admin = require("firebase-admin");
-      admin.firestore().runTransaction = mockFirestoreTransaction();
-    }
+    expect(exportedFunctions.firestoreNlpDocUpdate).toBeInstanceOf(Function);
+  });
 
-    beforeEach(() => {
-      jest.resetModules();
-
-      mockEnv = mockedEnv(defaultEnvironment);
-
-      // setup function mock data and wrap
-      functionsTest = functionsTestInit();
-
-      resetRequiredModules();
-
-      clearMocks();
+  test("calls the constructor of NlpTaskHandler with the right parameters", async () => {
+    // adjust the default env
+    jest.resetModules();
+    mockEnv = mockedEnv({
+      ...defaultEnvironment,
+      ENTITY_TYPES: "LOCATION,PERSON",
+      SAVE_COMMON_ENTITIES: "true",
+      SAVE_BIG_QUERY: "false", // only used here to make sure there isn't a mix up between booleans
     });
 
-    describe("on document creation", () => {
-      let beforeDocSnapshot;
+    jest.requireActual("../src");
+
+
+    expect(NlpTaskHandlerMock).toHaveBeenLastCalledWith({
+      entityTypesToSave: ["LOCATION", "PERSON"],
+      saveCommonEntities: true,
+    });
+  });
+
+    describe("firestoreNlpDocCreate", () => {
+      let admin;
+      let wrappedFirestoreNlpDocCreate;
       let afterDocSnapshot;
-      let mockedBeforeDocSnapshot;
       let mockedAfterDocSnapshot;
-      let change;
+
+      /**
+       * Imports extension functions src and admin modules.
+       * Usually needed after a "jest.resetModules()" since it clear admin import.
+       */
+      function resetRequiredModulesForFirestoreNlpDocCreate() {
+        wrappedFirestoreNlpDocCreate = functionsTest.wrap(require("../src").firestoreNlpDocCreate);
+
+        admin = require("firebase-admin");
+        admin.firestore().runTransaction = mockFirestoreTransaction();
+      }
 
       beforeEach(() => {
+        jest.resetModules();
+        mockEnv = mockedEnv(defaultEnvironment);
+
+        // setup function mock data and wrap
+        functionsTest = functionsTestInit();
+  
+        resetRequiredModulesForFirestoreNlpDocCreate();
+  
+        clearMocks();
+
         // setup the snapshot and mock snapshots for a CREATE scenario
-        beforeDocSnapshot = createDocumentSnapshot();
         afterDocSnapshot = createDocumentSnapshot();
-        mockedBeforeDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: beforeDocSnapshot,
-          exists: false,
-        });
         mockedAfterDocSnapshot = createMockDocSnapshotImplementation({
           documentSnapshot: afterDocSnapshot,
           exists: true,
         });
-        change = functionsTest.makeChange(
-          mockedBeforeDocSnapshot,
-          mockedAfterDocSnapshot
-        );
       });
 
       test(
@@ -149,12 +159,8 @@ describe("extension", () => {
           const newAfterDocSnapshot = createDocumentSnapshot({
             unrelated: "Unrelated field",
           });
-          change = functionsTest.makeChange(
-            mockedBeforeDocSnapshot,
-            newAfterDocSnapshot
-          );
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocCreate(newAfterDocSnapshot);
 
           expect(mockFirestoreUpdate).not.toHaveBeenCalled();
 
@@ -172,12 +178,8 @@ describe("extension", () => {
           const newAfterDocSnapshot = createDocumentSnapshot({
             unrelated: "Unrelated field",
           });
-          change = functionsTest.makeChange(
-            mockedBeforeDocSnapshot,
-            newAfterDocSnapshot
-          );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(newAfterDocSnapshot);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/no processing/i)
@@ -189,7 +191,7 @@ describe("extension", () => {
         "logs the completion of function when a document is created without " +
           "breaking errors during processing",
         async () => {
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/completed/i)
@@ -214,10 +216,10 @@ describe("extension", () => {
           Promise.resolve({ taskName: Task.ENTITY, error: entityError })
         );
 
-        await wrappedFirestoreNLP(change);
+        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          change.after.ref,
+          mockedAfterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           {}
         );
@@ -250,9 +252,9 @@ describe("extension", () => {
             Promise.resolve({ taskName: Task.ENTITY, error: entityError })
           );
 
-          resetRequiredModules(); // needed after jest.resetModules()
+          resetRequiredModulesForFirestoreNlpDocCreate(); // needed after jest.resetModules()
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           const expectedNewData = {
             SENTIMENT: {
@@ -261,7 +263,7 @@ describe("extension", () => {
             },
           };
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            change.after.ref,
+            mockedAfterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             expectedNewData
           );
@@ -277,7 +279,7 @@ describe("extension", () => {
             Promise.resolve({ taskName: Task.SENTIMENT, error: sentimentError })
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           // double check to allow use of simple regex
           expect(mockConsoleError).toHaveBeenCalledWith(
@@ -303,7 +305,7 @@ describe("extension", () => {
             })
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           // double check to allow use of simple regex
           expect(mockConsoleError).toHaveBeenCalledWith(
@@ -326,7 +328,7 @@ describe("extension", () => {
             Promise.resolve({ taskName: Task.ENTITY, error: entityError })
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           // double check to allow use of simple regex
           expect(mockConsoleError).toHaveBeenCalledWith(
@@ -351,9 +353,9 @@ describe("extension", () => {
             TASKS: "someTask",
           });
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/someTask/)
@@ -372,9 +374,9 @@ describe("extension", () => {
             TASKS: "unknown,SENTIMENT",
           });
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           expect(mockFirestoreUpdate).toHaveBeenCalled();
         }
@@ -401,15 +403,15 @@ describe("extension", () => {
         });
 
         // re-import modules because jest.resetModules
-        resetRequiredModules();
+        resetRequiredModulesForFirestoreNlpDocCreate();
 
-        await wrappedFirestoreNLP(change);
+        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
         const expectedNewData = {
           SENTIMENT: { score: 0.75, magnitude: 0.5 },
         };
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          change.after.ref,
+          mockedAfterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           expectedNewData
         );
@@ -433,15 +435,15 @@ describe("extension", () => {
         });
 
         // re-import modules because jest.resetModules
-        resetRequiredModules();
+        resetRequiredModulesForFirestoreNlpDocCreate();
 
-        await wrappedFirestoreNLP(change);
+        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
         const expectedNewData = {
           CLASSIFICATION: ["/Internet & Telecom/Mobile & Wireless"],
         };
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          change.after.ref,
+          mockedAfterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           expectedNewData
         );
@@ -468,9 +470,9 @@ describe("extension", () => {
         });
 
         // re-import modules because jest.resetModules
-        resetRequiredModules();
+        resetRequiredModulesForFirestoreNlpDocCreate();
 
-        await wrappedFirestoreNLP(change);
+        await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
         const expectedNewData = {
           ENTITY: {
@@ -478,7 +480,7 @@ describe("extension", () => {
           },
         };
         expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-          change.after.ref,
+          mockedAfterDocSnapshot.ref,
           defaultEnvironment.OUTPUT_FIELD_NAME,
           expectedNewData
         );
@@ -525,9 +527,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           const expectedNewData = {
             SENTIMENT: {
@@ -540,7 +542,7 @@ describe("extension", () => {
             },
           };
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            change.after.ref,
+            mockedAfterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             expectedNewData
           );
@@ -568,12 +570,12 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            change.after.ref,
+            mockedAfterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             { CLASSIFICATION: [] }
           );
@@ -601,27 +603,212 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocCreate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
 
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
-            change.after.ref,
+            mockedAfterDocSnapshot.ref,
             defaultEnvironment.OUTPUT_FIELD_NAME,
             { ENTITY: {} }
           );
         }
       );
+
+      test(
+        "does not perform NLP operations when input field name is the " +
+          "same as output field name",
+        async () => {
+          // adjust the default env
+          jest.resetModules();
+          mockEnv = mockedEnv({
+            ...defaultEnvironment,
+            INPUT_FIELD_NAME: "input",
+            OUTPUT_FIELD_NAME: "input",
+          });
+
+          // re-import modules because jest.resetModules
+          resetRequiredModulesForFirestoreNlpDocCreate();
+
+          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+
+          expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
+          expect(mockPerformTextClassification).not.toHaveBeenCalled();
+          expect(mockPerformEntityExtraction).not.toHaveBeenCalled();
+
+          // helps make sure the previous expectation happened by purpose
+          // and not because function failed.
+          expect(resolution).resolves;
+        }
+      );
+
+      test(
+        "does not perform Firestore operations when input field name is the " +
+          "same as output field name",
+        async () => {
+          // adjust the default env
+          jest.resetModules();
+          mockEnv = mockedEnv({
+            ...defaultEnvironment,
+            INPUT_FIELD_NAME: "input",
+            OUTPUT_FIELD_NAME: "input",
+          });
+
+          // re-import modules because jest.resetModules
+          resetRequiredModulesForFirestoreNlpDocCreate();
+
+          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+
+          expect(mockFirestoreUpdate).not.toHaveBeenCalled();
+
+          // helps make sure the previous expectation happened by purpose
+          // and not because function failed.
+          expect(resolution).resolves;
+        }
+      );
+
+      test(
+        "logs that input field name and output field name must be different " +
+          "when input field name is the same as output field name",
+        async () => {
+          // adjust the default env
+          jest.resetModules();
+          mockEnv = mockedEnv({
+            ...defaultEnvironment,
+            INPUT_FIELD_NAME: "input",
+            OUTPUT_FIELD_NAME: "input",
+          });
+
+          // re-import modules because jest.resetModules
+          resetRequiredModulesForFirestoreNlpDocCreate();
+
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+
+          expect(mockConsoleError).toHaveBeenCalledWith(
+            expect.stringMatching(/input/i)
+          );
+          expect(mockConsoleError).toHaveBeenCalledWith(
+            expect.stringMatching(/output/i)
+          );
+          expect(mockConsoleError).toHaveBeenCalledWith(
+            expect.stringMatching(/different/i)
+          );
+        }
+      );
+
+      test(
+        "does not perform NLP operations when input field name is a subfield " +
+          "of output field",
+        async () => {
+          // adjust the default env
+          jest.resetModules();
+          mockEnv = mockedEnv({
+            ...defaultEnvironment,
+            INPUT_FIELD_NAME: "input.nlp",
+            OUTPUT_FIELD_NAME: "input",
+          });
+
+          // re-import modules because jest.resetModules
+          resetRequiredModulesForFirestoreNlpDocCreate();
+
+          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+
+          expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
+          expect(mockPerformTextClassification).not.toHaveBeenCalled();
+          expect(mockPerformEntityExtraction).not.toHaveBeenCalled();
+
+          // helps make sure the previous expectation happened by purpose
+          // and not because function failed.
+          expect(resolution).resolves;
+        }
+      );
+
+      test(
+        "does not perform Firestore operations when input field name is a " +
+          "subfield of output field",
+        async () => {
+          // adjust the default env
+          jest.resetModules();
+          mockEnv = mockedEnv({
+            ...defaultEnvironment,
+            INPUT_FIELD_NAME: "input.nlp",
+            OUTPUT_FIELD_NAME: "input",
+          });
+
+          // re-import modules because jest.resetModules
+          resetRequiredModulesForFirestoreNlpDocCreate();
+
+          const resolution = await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+
+          expect(mockFirestoreUpdate).not.toHaveBeenCalled();
+
+          // helps make sure the previous expectation happened by purpose
+          // and not because function failed.
+          expect(resolution).resolves;
+        }
+      );
+
+      test(
+        "logs that input field name and output field name must be different " +
+          "when input field name is a subfield of output field",
+        async () => {
+          // adjust the default env
+          jest.resetModules();
+          mockEnv = mockedEnv({
+            ...defaultEnvironment,
+            INPUT_FIELD_NAME: "input.nlp",
+            OUTPUT_FIELD_NAME: "input",
+          });
+
+          // re-import modules because jest.resetModules
+          resetRequiredModulesForFirestoreNlpDocCreate();
+
+          await wrappedFirestoreNlpDocCreate(mockedAfterDocSnapshot);
+
+          expect(mockConsoleError).toHaveBeenCalledWith(
+            expect.stringMatching(/input/i)
+          );
+          expect(mockConsoleError).toHaveBeenCalledWith(
+            expect.stringMatching(/output/i)
+          );
+          expect(mockConsoleError).toHaveBeenCalledWith(
+            expect.stringMatching(/subfield/i)
+          );
+        }
+      );
+
     });
 
-    describe("on document update", () => {
+    describe("firestoreNlpDocUpdate", () => {
+      let admin;
+      let wrappedFirestoreNlpDocUpdate;
       let beforeDocSnapshot;
       let afterDocSnapshot;
       let mockedBeforeDocSnapshot;
       let mockedAfterDocSnapshot;
       let change;
 
+      /**
+       * Imports extension functions src and admin modules.
+       * Usually needed after a "jest.resetModules()" since it clear admin import.
+       */
+      function resetRequiredModulesForFirestoreNlpDocUpdate() {
+        wrappedFirestoreNlpDocUpdate = functionsTest.wrap(require("../src").firestoreNlpDocUpdate);
+
+        admin = require("firebase-admin");
+        admin.firestore().runTransaction = mockFirestoreTransaction();
+      }
+
       beforeEach(() => {
+        jest.resetModules();
+        mockEnv = mockedEnv(defaultEnvironment);
+
+        // setup function mock data and wrap
+        functionsTest = functionsTestInit();
+  
+        resetRequiredModulesForFirestoreNlpDocUpdate();
+  
+        clearMocks();
         // setup the snapshot and mock snapshots for a UPDATE scenario
         beforeDocSnapshot = createDocumentSnapshot({ input: "Before" });
         afterDocSnapshot = createDocumentSnapshot({ input: "After" });
@@ -657,7 +844,7 @@ describe("extension", () => {
             newMockAfterDocSnap
           );
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
           expect(mockPerformTextClassification).not.toHaveBeenCalled();
@@ -687,7 +874,7 @@ describe("extension", () => {
             newMockAfterDocSnap
           );
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockFirestoreUpdate).not.toHaveBeenCalled();
 
@@ -715,7 +902,7 @@ describe("extension", () => {
             newMockAfterDocSnap
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/document.*updated/i)
@@ -750,9 +937,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           const expectedNewData = {
             SENTIMENT: { score: 0.75, magnitude: 0.5 },
@@ -769,7 +956,7 @@ describe("extension", () => {
         "logs an update occured with new input field data when document is " +
           "updated with new data in input field",
         async () => {
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/document.*updated/i)
@@ -800,7 +987,7 @@ describe("extension", () => {
             newMockAfterDocSnap
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockFirestoreUpdate).toHaveBeenLastCalledWith(
             change.after.ref,
@@ -830,7 +1017,7 @@ describe("extension", () => {
             newMockAfterDocSnap
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/document.*updated/i)
@@ -861,7 +1048,7 @@ describe("extension", () => {
             newMockAfterDocSnap
           );
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockConsoleLog).toHaveBeenCalledWith(
             expect.stringMatching(/document.*updated/i)
@@ -874,105 +1061,6 @@ describe("extension", () => {
           );
         }
       );
-    });
-
-    describe("on document delete", () => {
-      let beforeDocSnapshot;
-      let afterDocSnapshot;
-      let mockedBeforeDocSnapshot;
-      let mockedAfterDocSnapshot;
-      let change;
-
-      beforeEach(() => {
-        // setup the snapshot and mock snapshots for a DELETE scenario
-        beforeDocSnapshot = createDocumentSnapshot();
-        afterDocSnapshot = createDocumentSnapshot();
-        mockedBeforeDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: beforeDocSnapshot,
-          exists: true,
-        });
-        mockedAfterDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: afterDocSnapshot,
-          exists: false,
-        });
-        change = functionsTest.makeChange(
-          mockedBeforeDocSnapshot,
-          mockedAfterDocSnapshot
-        );
-      });
-
-      test("logs that the document was deleted on document delete", async () => {
-        await wrappedFirestoreNLP(change);
-
-        expect(mockConsoleLog).toHaveBeenCalledWith(
-          expect.stringMatching(/document.*deleted/i)
-        );
-      });
-
-      test("does not perform NLP operations on document delete", async () => {
-        const resolution = await wrappedFirestoreNLP(change);
-
-        expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
-        expect(mockPerformTextClassification).not.toHaveBeenCalled();
-        expect(mockPerformEntityExtraction).not.toHaveBeenCalled();
-
-        // helps make sure the previous expectation happened by purpose
-        // and not because function failed.
-        expect(resolution).resolves;
-      });
-
-      test("does not perform Firestore operations on document delete", async () => {
-        const resolution = await wrappedFirestoreNLP(change);
-
-        expect(mockFirestoreUpdate).not.toHaveBeenCalled();
-
-        // helps make sure the previous expectation happened by purpose
-        // and not because function failed.
-        expect(resolution).resolves;
-      });
-    });
-
-    describe("on any operation", () => {
-      let change;
-
-      beforeEach(() => {
-        // setup as a CREATE scenario as a default scenario since this suite
-        // should not care
-        const beforeDocSnapshot = createDocumentSnapshot();
-        const afterDocSnapshot = createDocumentSnapshot();
-        const mockedBeforeDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: beforeDocSnapshot,
-          exists: false,
-        });
-        const mockedAfterDocSnapshot = createMockDocSnapshotImplementation({
-          documentSnapshot: afterDocSnapshot,
-          exists: true,
-        });
-        change = functionsTest.makeChange(
-          mockedBeforeDocSnapshot,
-          mockedAfterDocSnapshot
-        );
-      });
-
-      test("calls the constructor of NlpTaskHandler with the right parameters", async () => {
-        // adjust the default env
-        jest.resetModules();
-        mockEnv = mockedEnv({
-          ...defaultEnvironment,
-          ENTITY_TYPES: "LOCATION,PERSON",
-          SAVE_COMMON_ENTITIES: "true",
-          SAVE_BIG_QUERY: "false", // only used here to make sure there isn't a mix up between booleans
-        });
-
-        resetRequiredModules(); // needed after jest.resetModules()
-
-        await wrappedFirestoreNLP(change);
-
-        expect(NlpTaskHandlerMock).toHaveBeenLastCalledWith({
-          entityTypesToSave: ["LOCATION", "PERSON"],
-          saveCommonEntities: true,
-        });
-      });
 
       test(
         "does not perform NLP operations when input field name is the " +
@@ -987,9 +1075,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
           expect(mockPerformTextClassification).not.toHaveBeenCalled();
@@ -1014,9 +1102,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockFirestoreUpdate).not.toHaveBeenCalled();
 
@@ -1039,9 +1127,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockConsoleError).toHaveBeenCalledWith(
             expect.stringMatching(/input/i)
@@ -1068,9 +1156,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockPerformSentimentAnalysis).not.toHaveBeenCalled();
           expect(mockPerformTextClassification).not.toHaveBeenCalled();
@@ -1095,9 +1183,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          const resolution = await wrappedFirestoreNLP(change);
+          const resolution = await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockFirestoreUpdate).not.toHaveBeenCalled();
 
@@ -1120,9 +1208,9 @@ describe("extension", () => {
           });
 
           // re-import modules because jest.resetModules
-          resetRequiredModules();
+          resetRequiredModulesForFirestoreNlpDocUpdate();
 
-          await wrappedFirestoreNLP(change);
+          await wrappedFirestoreNlpDocUpdate(change);
 
           expect(mockConsoleError).toHaveBeenCalledWith(
             expect.stringMatching(/input/i)
@@ -1136,5 +1224,5 @@ describe("extension", () => {
         }
       );
     });
-  });
+      
 });
