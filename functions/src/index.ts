@@ -20,6 +20,10 @@ import * as admin from "firebase-admin";
 import * as logs from "./logs";
 import config from "./config";
 import * as validators from "./validators";
+import {
+  splitLastPathSegment,
+  convertTaskStringListToEnumList,
+} from "./utilities";
 
 import {
   NlpData,
@@ -29,17 +33,24 @@ import {
   Task,
 } from "./models";
 import { NlpTaskHandler } from "./nlpTaskHandler";
+import { BigQueryHandler } from "./bigQueryHandler";
 
 const nlpTaskHandler = new NlpTaskHandler({
   entityTypesToSave: config.entityTypesToSave,
   saveCommonEntities: config.saveCommonEntities,
 });
 
+const bigQueryHandler = new BigQueryHandler({
+  datasetId: config.bigQueryDatasetId,
+  tablesPrefix: splitLastPathSegment(config.collectionPath).lastSegment,
+  supportedTasks: convertTaskStringListToEnumList(config.tasks),
+});
+
 admin.initializeApp();
 
 export const firestoreNlpDocCreate = functions.handler.firestore.document.onCreate(
   async (docSnapshot): Promise<void> => {
-    if(!isConfigValid()) {
+    if (!isConfigValid()) {
       return;
     }
 
@@ -51,11 +62,23 @@ export const firestoreNlpDocCreate = functions.handler.firestore.document.onCrea
 
 export const firestoreNlpDocUpdate = functions.handler.firestore.document.onUpdate(
   async (change): Promise<void> => {
-    if(!isConfigValid()) {
+    if (!isConfigValid()) {
       return;
     }
 
     await handleUpdateDocument(change.before, change.after);
+
+    logs.complete();
+  }
+);
+
+export const firestoreNlpDocDelete = functions.handler.firestore.document.onDelete(
+  async (docSnapshot): Promise<void> => {
+    if (!isConfigValid()) {
+      return;
+    }
+
+    await handleDeleteDocument(docSnapshot);
 
     logs.complete();
   }
@@ -86,6 +109,20 @@ function extractInput(snapshot: admin.firestore.DocumentSnapshot): string {
   return snapshot.get(config.inputFieldName);
 }
 
+async function handleDeleteDocument(
+  docSnapshot: admin.firestore.DocumentSnapshot
+) {
+  logs.documentDeleted(docSnapshot.ref.path);
+
+  if (config.saveToBigQuery) {
+    const pathSplit = splitLastPathSegment(docSnapshot.ref.path);
+    await bigQueryHandler.deleteNlpData(
+      pathSplit.startSegment,
+      pathSplit.lastSegment
+    );
+  }
+}
+
 async function handleUpdateDocument(
   beforeDocSnapshot: admin.firestore.DocumentSnapshot,
   afterDocSnapshot: admin.firestore.DocumentSnapshot
@@ -101,6 +138,15 @@ async function handleUpdateDocument(
   if (inputBefore === inputAfter) {
     logs.documentUpdatedUnchangedInput();
     return;
+  }
+
+  // on any update of input field, first clean BigQuery
+  if (config.saveToBigQuery) {
+    const pathSplit = splitLastPathSegment(afterDocSnapshot.ref.path);
+    await bigQueryHandler.deleteNlpData(
+      pathSplit.startSegment,
+      pathSplit.lastSegment
+    );
   }
 
   if (inputAfter) {
@@ -152,6 +198,15 @@ async function updateNlpData(
   }
 
   await updateDocumentNlpData(docSnapshot.ref, nlpData);
+  
+  if (config.saveToBigQuery) {
+    const pathSplit = splitLastPathSegment(docSnapshot.ref.path);
+    await bigQueryHandler.writeNlpData(
+      nlpData,
+      pathSplit.startSegment,
+      pathSplit.lastSegment
+    );
+  }
 }
 
 async function performNLPTask(

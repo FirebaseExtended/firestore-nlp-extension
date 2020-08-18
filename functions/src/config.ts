@@ -15,9 +15,12 @@
  */
 
 export default {
+  collectionPath: process.env.COLLECTION_PATH,
   inputFieldName: process.env.INPUT_FIELD_NAME,
   outputFieldName: process.env.OUTPUT_FIELD_NAME,
   tasks: Array.from(new Set(process.env.TASKS.split(","))),
   entityTypesToSave: Array.from(new Set(process.env.ENTITY_TYPES.split(","))),
   saveCommonEntities: process.env.SAVE_COMMON_ENTITIES === "true",
+  saveToBigQuery: process.env.SAVE_BIG_QUERY === "true",
+  bigQueryDatasetId: process.env.BQ_DATASET_ID,
 };

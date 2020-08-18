@@ -38,17 +38,24 @@ billingRequired: true
 apis:
   - apiName: language.googleapis.com
     reason: Powers all NLP tasks performed by the extension.
+  - apiName: bigquery-json.googleapis.com
+    reason: Needed to interact with BigQuery to create dataset, tables and handle data.
 
 roles:
   - role: datastore.user
     reason: Allows the extension to read input data from Cloud Firestore and write the NLP data to Cloud Firestore.
+  - role: bigquery.dataEditor
+    reason: Allows the extension to configure datasets and tables in BigQuery.
+  - role: bigquery.jobUser
+    reason: Allows the extension to create jobs for data insertions and deletions in BigQuery.
 
 resources:
   - name: firestoreNlpDocCreate
     type: firebaseextensions.v1beta.function
     description:
       Listens for new documents in your specified Cloud Firestore collection, performs the configured NLP tasks on a specific string,
-      then writes the output from the NLP tasks back to the same document.
+      then writes the output from the NLP tasks back to the same document. 
+      Also saves data to BigQuery if extension is configured to do so.
       The NLP tasks available are entity extraction, sentiment analysis and content classification.
     properties:
       location: ${LOCATION}
@@ -60,12 +67,23 @@ resources:
     type: firebaseextensions.v1beta.function
     description:
       Listens for updates to strings in your specified Cloud Firestore collection, performs the configured NLP tasks on the string,
-      then writes the output from the NLP tasks back to the same document (overriding any previous data).
+      then writes the output from the NLP tasks back to the same document (overriding any previous data). 
+      Also saves data to BigQuery if extension is configured to do so.
       The NLP tasks available are entity extraction, sentiment analysis and content classification.
     properties:
       location: ${LOCATION}
       eventTrigger:
         eventType: providers/cloud.firestore/eventTypes/document.update
+        resource: projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION_PATH}/{messageId}
+      runtime: "nodejs10"
+  - name: firestoreNlpDocDelete
+    type: firebaseextensions.v1beta.function
+    description:
+      Listens for doc deletion in your specified Cloud Firestore collection and clear corresponding data in BigQuery.
+    properties:
+      location: ${LOCATION}
+      eventTrigger:
+        eventType: providers/cloud.firestore/eventTypes/document.delete
         resource: projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION_PATH}/{messageId}
       runtime: "nodejs10"
 
@@ -188,4 +206,29 @@ params:
       - label: No
         value: false
     default: false
+    required: true
+
+  - param: SAVE_BIG_QUERY
+    label: Do you want NLP data also saved in BigQuery?
+    description: >
+      By default, the results of the NLP tasks are saved back into the original document. If you want to **also** save 
+      that data in BigQuery, select "Yes". BigQuery can enable more powerful aggregation queries.
+    type: select
+    options:
+      - label: Yes
+        value: true
+      - label: No
+        value: false
+    default: true
+    required: true
+
+  - param: BQ_DATASET_ID
+    label: BigQuery dataset id.
+    description: >
+      What is the the id of dataset that will be created. This is only used if you configure the extension 
+      to save data to BigQuery.
+    example: reviews_nlp
+    validationRegex: "^[a-zA-Z0-9_]{1,100}$"
+    validationErrorMessage: Must be a valid BigQuery dataset id
+    default: reviews_nlp
     required: true

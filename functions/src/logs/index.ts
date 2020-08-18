@@ -48,6 +48,10 @@ export function nlpTaskError(taskName: string, err: Error) {
   console.error(`Error occured while performing task '${taskName}'`, err);
 }
 
+export function documentDeleted(path: string) {
+  console.log(`Document ${path} was deleted, no processing is required`);
+}
+
 export function documentUpdatedUnchangedInput() {
   console.log(
     "Document was updated, input string has not changed, no processing is required"
@@ -79,5 +83,51 @@ export function inputFieldIsSubfieldOfOutputField() {
   console.error(
     "The 'Input' field name must not be a subfield of 'Output' " +
       "for this extension to function correctly"
+  );
+}
+
+export function initializeBigQueryHandler() {
+  console.log("Initializing BigQueryHandler");
+}
+
+export function finishBigQueryHandlerInit() {
+  console.log("Finished initializing of BigQueryHandler");
+}
+
+export function createDataset(datasetId: string) {
+  console.log(`Creating dataset '${datasetId}'`);
+}
+
+export function createTable(tableId: string) {
+  console.log(`Creating table '${tableId}'`);
+}
+
+export function writingDataToBigQuery() {
+  console.log("Writing data to BigQuery");
+}
+
+export function completedWritingDataToBigQuery() {
+  console.log("Completed writing data to BigQuery");
+}
+
+export function completedDeleteDataInBigQuery() {
+    console.log("Completed deletion of data in BigQuery");
+  }
+
+export function bigQueryWriteError(task: string, err: Error) {
+  console.error(`Error when writing ${task} data to BigQuery`, err);
+}
+
+export function bigQueryQueryError(query: string, err: Error) {
+  console.error(
+    `Error occured when performing query "${query}" to BigQuery`,
+    err
+  );
+}
+
+export function bigQueryHandlerInitError(err: Error) {
+  console.error(
+    "An error occured during initialization of BigQueryHandler",
+    err
   );
 }
