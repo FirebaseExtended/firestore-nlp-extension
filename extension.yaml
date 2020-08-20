@@ -119,7 +119,7 @@ params:
     required: true
   
   - param: OUTPUT_FIELD_NAME
-    label: OUTPUT field name
+    label: Output field name
     description: >
       What is the name of the field that will contain the output(s) from NLP tasks?
     example: textNLP
@@ -177,7 +177,7 @@ params:
     required: true
 
   - param: SAVE_COMMON_ENTITIES
-    label: Do you want entites that are common names to be saved?
+    label: Do you want entities that are common nouns to be saved?
     description: >
       If you perform entity extraction, entities can either be "common" or "proper". Common entities can be numerous 
       so you can select "No" so that they are not saved.
