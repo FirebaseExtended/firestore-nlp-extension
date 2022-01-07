@@ -4,6 +4,7 @@
   "main": "lib/index.js",
   "license": "Apache-2.0",
   "scripts": {
+    "prepare": "npm run build",
     "build": "npm run clean && npm run compile",
     "format": "prettier --write \"**/*.{md,yml,ts,json,yaml}\"",
     "lint": "prettier --list-different \"**/*.{md,yml,ts,json,yaml}\"",
