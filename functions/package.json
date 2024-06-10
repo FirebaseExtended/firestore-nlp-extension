@@ -14,8 +14,8 @@
     "generate-readme": "firebase ext:info .. --markdown > ../README.md"
   },
   "dependencies": {
-    "@google-cloud/language": "^4.1.0",
-    "firebase-admin": "^8.6.0",
+    "@google-cloud/language": "^6.4.0",
+    "firebase-admin": "^12.1.1",
     "firebase-functions": "^3.6.1"
   },
   "devDependencies": {
